@@ -14,6 +14,7 @@ pkgs.mkShell {
     pkgs.glibc.out
     pkgs.glibc.static
     pkgs.rustup
+    pkgs.gdb
     gccWrapper
     gppWrapper
   ];
