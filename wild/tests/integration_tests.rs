@@ -1571,6 +1571,9 @@ struct PhdrAssertions {
 
     paddr: Option<u64>,
     vaddr: Option<u64>,
+
+    memsz: Option<u64>,
+    filesz: Option<u64>,
 }
 
 impl ExpectedProgramHeaders {
@@ -4312,6 +4315,26 @@ impl Assertions {
                         continue;
                     }
 
+                    if let Some(expected_filesz) = assertions.filesz
+                        && header.p_filesz(endian) != expected_filesz
+                    {
+                        println!(
+                            "Skip due to filsz: expected {expected_filesz} and actual {}",
+                            header.p_filesz(endian)
+                        );
+                        continue;
+                    }
+
+                    if let Some(expected_memsz) = assertions.memsz
+                        && header.p_memsz(endian) != expected_memsz
+                    {
+                        println!(
+                            "Skip due to memsz: expected {expected_memsz} and actual {}",
+                            header.p_memsz(endian)
+                        );
+                        continue;
+                    }
+
                     if !expected_sections.is_empty() {
                         let mut has_wildcard = false;
                         let mut sections_found = 0;
@@ -4342,10 +4365,12 @@ impl Assertions {
 
             if !found {
                 bail!(
-                    "Expected program header `{}' with flags {:?} and sections {:?} not found.",
+                    "Expected program header `{}' with flags {:?}, sections {:?}, memsz {:?} and filesz {:?} not found.",
                     expected.ptype,
                     expected.assertions.flags,
                     expected.assertions.sections,
+                    expected.assertions.memsz,
+                    expected.assertions.filesz,
                 );
             }
         }

@@ -9,6 +9,7 @@
 //#DiffIgnore:section.rodata
 //#DiffIgnore:section.got
 //#DiffIgnore:.dynamic.*
+//#ExpectProgramHeader:TLS memsz=4,filesz=0
 
 #include "../common/runtime.h"
 
