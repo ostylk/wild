@@ -5140,6 +5140,13 @@ fn layout_section<'data, P: Platform>(
 
     let mut records_out = output_sections.new_part_map();
 
+    // TLS sections without data (like .tbss) overlap normal sections in memory.
+    // This is possible because every thread copies the TLS segments (see TLS PHDR)
+    // to construct thread local data. However, uninitialized TLS data is assumed to be zero
+    // and therefore no copy happens. It would be wasteful to reserve that address in the TLS
+    // template, so we don't do it.
+    let mut tls_memsave: Option<u64> = None;
+
     for event in output_order {
         match event {
             OrderEvent::SetLocation(expr) => {
@@ -5181,6 +5188,19 @@ fn layout_section<'data, P: Platform>(
                     "SetLocation, Section without SegmentStart"
                 );
                 let section_info = output_sections.output_info(section_id);
+
+                let is_tls_nobits = section_info.section_attributes.is_tls()
+                    && section_info.section_attributes.is_no_bits();
+                if is_tls_nobits {
+                    // Save our current mem_offset as we enter our first nobits TLS section
+                    if tls_memsave.is_none() {
+                        tls_memsave = Some(mem_offset);
+                    }
+                } else if let Some(tls_memsave) = tls_memsave.take() {
+                    // Restore offsets when exiting nobits TLS sections
+                    mem_offset = tls_memsave;
+                }
+
                 let part_id_range = section_id.part_id_range();
                 let max_alignment = sizes.max_alignment(part_id_range.clone(), output_sections);
                 let region = section_info
